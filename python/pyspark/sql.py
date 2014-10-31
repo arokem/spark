@@ -28,6 +28,8 @@ public classes of Spark SQL:
     - L{HiveContext}
       Main entry point for accessing data stored in Apache Hive..
 """
+from __future__ import absolute_import
+from __future__ import print_function
 
 import itertools
 import decimal
@@ -46,6 +48,9 @@ from pyspark.rdd import RDD
 from pyspark.serializers import BatchedSerializer, PickleSerializer, CloudPickleSerializer
 from pyspark.storagelevel import StorageLevel
 from pyspark.traceback_utils import SCCallSiteSync
+from . import six
+from six.moves import map
+from six.moves import zip
 
 
 __all__ = [
@@ -97,11 +102,9 @@ class PrimitiveTypeSingleton(type):
         return cls._instances[cls]
 
 
-class PrimitiveType(DataType):
+class PrimitiveType(six.with_metaclass(PrimitiveTypeSingleton, DataType)):
 
     """Spark SQL PrimitiveType"""
-
-    __metaclass__ = PrimitiveTypeSingleton
 
     def __eq__(self, other):
         # because they should be the same object
@@ -385,7 +388,7 @@ class StructType(DataType):
 
 
 _all_primitive_types = dict((v.typeName(), v)
-                            for v in globals().itervalues()
+                            for v in six.itervalues(globals())
                             if type(v) is PrimitiveTypeSingleton and
                             v.__base__ == PrimitiveType)
 
@@ -440,7 +443,7 @@ def _parse_datatype_json_string(json_string):
 
 
 def _parse_datatype_json_value(json_value):
-    if type(json_value) is unicode and json_value in _all_primitive_types.keys():
+    if type(json_value) is six.text_type and json_value in list(_all_primitive_types.keys()):
         return _all_primitive_types[json_value]()
     else:
         return _all_complex_types[json_value["type"]].fromJson(json_value)
@@ -450,10 +453,10 @@ def _parse_datatype_json_value(json_value):
 _type_mappings = {
     bool: BooleanType,
     int: IntegerType,
-    long: LongType,
+    int: LongType,
     float: DoubleType,
     str: StringType,
-    unicode: StringType,
+    six.text_type: StringType,
     bytearray: BinaryType,
     decimal.Decimal: DecimalType,
     datetime.date: DateType,
@@ -474,7 +477,7 @@ def _infer_type(obj):
     if isinstance(obj, dict):
         if not obj:
             raise ValueError("Can not infer type for empty dict")
-        key, value = obj.iteritems().next()
+        key, value = six.iteritems(obj)
         return MapType(_infer_type(key), _infer_type(value), True)
     elif isinstance(obj, (list, array)):
         if not obj:
@@ -494,9 +497,9 @@ def _infer_schema(row):
 
     elif isinstance(row, tuple):
         if hasattr(row, "_fields"):  # namedtuple
-            items = zip(row._fields, tuple(row))
+            items = list(zip(row._fields, tuple(row)))
         elif hasattr(row, "__FIELDS__"):  # Row
-            items = zip(row.__FIELDS__, tuple(row))
+            items = list(zip(row.__FIELDS__, tuple(row)))
         elif all(isinstance(x, tuple) and len(x) == 2 for x in row):
             items = row
         else:
@@ -516,12 +519,12 @@ def _create_converter(obj, dataType):
     """Create an converter to drop the names of fields in obj """
     if isinstance(dataType, ArrayType):
         conv = _create_converter(obj[0], dataType.elementType)
-        return lambda row: map(conv, row)
+        return lambda row: list(map(conv, row))
 
     elif isinstance(dataType, MapType):
-        value = obj.values()[0]
+        value = list(obj.values())[0]
         conv = _create_converter(value, dataType.valueType)
-        return lambda row: dict((k, conv(v)) for k, v in row.iteritems())
+        return lambda row: dict((k, conv(v)) for k, v in six.iteritems(row))
 
     elif not isinstance(dataType, StructType):
         return lambda x: x
@@ -561,7 +564,7 @@ def _create_converter(obj, dataType):
 def _drop_schema(rows, schema):
     """ all the names of fields, becoming tuples"""
     iterator = iter(rows)
-    row = iterator.next()
+    row = next(iterator)
     converter = _create_converter(row, schema)
     yield converter(row)
     for i in iterator:
@@ -597,7 +600,7 @@ def _split_schema_abstract(s):
             w += c
             if c in _BRACKETS:
                 brackets.append(c)
-            elif c in _BRACKETS.values():
+            elif c in list(_BRACKETS.values()):
                 if not brackets or c != _BRACKETS[brackets.pop()]:
                     raise ValueError("unexpected " + c)
 
@@ -684,7 +687,7 @@ def _infer_schema_type(obj, dataType):
         return ArrayType(eType, True)
 
     elif isinstance(dataType, MapType):
-        k, v = obj.iteritems().next()
+        k, v = six.iteritems(obj)
         return MapType(_infer_type(k),
                        _infer_schema_type(v, dataType.valueType))
 
@@ -702,14 +705,14 @@ def _infer_schema_type(obj, dataType):
 
 _acceptable_types = {
     BooleanType: (bool,),
-    ByteType: (int, long),
-    ShortType: (int, long),
-    IntegerType: (int, long),
-    LongType: (int, long),
+    ByteType: six.integer_types,
+    ShortType: six.integer_types,
+    IntegerType: six.integer_types,
+    LongType: six.integer_types,
     FloatType: (float,),
     DoubleType: (float,),
     DecimalType: (decimal.Decimal,),
-    StringType: (str, unicode),
+    StringType: (str, six.text_type),
     BinaryType: (bytearray,),
     DateType: (datetime.date,),
     TimestampType: (datetime.datetime,),
@@ -757,7 +760,7 @@ def _verify_type(obj, dataType):
             _verify_type(i, dataType.elementType)
 
     elif isinstance(dataType, MapType):
-        for k, v in obj.iteritems():
+        for k, v in six.iteritems(obj):
             _verify_type(k, dataType.keyType)
             _verify_type(v, dataType.valueType)
 
@@ -881,7 +884,7 @@ def _create_cls(dataType):
         def Dict(d):
             if d is None:
                 return
-            return dict((k, _create_object(cls, v)) for k, v in d.items())
+            return dict((k, _create_object(cls, v)) for k, v in list(d.items()))
 
         return Dict
 
@@ -903,7 +906,7 @@ def _create_cls(dataType):
 
         def asDict(self):
             """ Return as a dict """
-            return dict(zip(self.__FIELDS__, self))
+            return dict(list(zip(self.__FIELDS__, self)))
 
         def __repr__(self):
             # call collect __repr__ for nested objects
@@ -1299,9 +1302,9 @@ class SQLContext(object):
 
         def func(iterator):
             for x in iterator:
-                if not isinstance(x, basestring):
-                    x = unicode(x)
-                if isinstance(x, unicode):
+                if not isinstance(x, six.string_types):
+                    x = six.text_type(x)
+                if isinstance(x, six.text_type):
                     x = x.encode("utf-8")
                 yield x
         keyed = rdd.mapPartitions(func)
@@ -1470,7 +1473,7 @@ class Row(tuple):
         """
         if not hasattr(self, "__FIELDS__"):
             raise TypeError("Cannot convert a Row class into dict")
-        return dict(zip(self.__FIELDS__, self))
+        return dict(list(zip(self.__FIELDS__, self)))
 
     # let obect acs like class
     def __call__(self, *args):
@@ -1503,7 +1506,7 @@ class Row(tuple):
 
 
 def inherit_doc(cls):
-    for name, func in vars(cls).items():
+    for name, func in list(vars(cls).items()):
         # only inherit docstring for public functions
         if name.startswith("_"):
             continue
@@ -1634,7 +1637,7 @@ class SchemaRDD(RDD):
 
     def printSchema(self):
         """Prints out the schema in the tree format."""
-        print self.schemaString()
+        print(self.schemaString())
 
     def count(self):
         """Return the number of elements in this RDD.
@@ -1668,7 +1671,7 @@ class SchemaRDD(RDD):
         with SCCallSiteSync(self.context) as css:
             bytesInJava = self._jschema_rdd.baseSchemaRDD().collectToPython().iterator()
         cls = _create_cls(self.schema())
-        return map(cls, self._collect_iterator_through_file(bytesInJava))
+        return list(map(cls, self._collect_iterator_through_file(bytesInJava)))
 
     def take(self, num):
         """Take the first num rows of the RDD.

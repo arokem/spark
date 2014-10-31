@@ -18,11 +18,14 @@
 """
 Fuller unit tests for Python MLlib.
 """
+from __future__ import absolute_import
+from __future__ import print_function
 
 import sys
 import array as pyarray
 
 from numpy import array, array_equal
+from six.moves import range
 
 if sys.version_info[:2] <= (2, 6):
     try:
@@ -71,9 +74,9 @@ class VectorTests(PySparkTestCase):
         self.assertEqual(vs, nvs)
 
     def test_serialize(self):
-        self._test_serialize(DenseVector(range(10)))
+        self._test_serialize(DenseVector(list(range(10))))
         self._test_serialize(DenseVector(array([1., 2., 3., 4.])))
-        self._test_serialize(DenseVector(pyarray.array('d', range(10))))
+        self._test_serialize(DenseVector(pyarray.array('d', list(range(10)))))
         self._test_serialize(SparseVector(4, {1: 1, 3: 2}))
 
     def test_dot(self):
@@ -212,11 +215,11 @@ class StatTests(PySparkTestCase):
         summary = Statistics.colStats(data)
         self.assertEqual(1000, summary.count())
         # array
-        data = self.sc.parallelize([range(10)] * 10)
+        data = self.sc.parallelize([list(range(10))] * 10)
         summary = Statistics.colStats(data)
         self.assertEqual(10, summary.count())
         # array
-        data = self.sc.parallelize([pyarray.array("d", range(10))] * 10)
+        data = self.sc.parallelize([pyarray.array("d", list(range(10)))] * 10)
         summary = Statistics.colStats(data)
         self.assertEqual(10, summary.count())
 
@@ -270,7 +273,7 @@ class SciPyTests(PySparkTestCase):
         """Create a column SciPy matrix from a dictionary of values"""
         from scipy.sparse import lil_matrix
         lil = lil_matrix((size, 1))
-        for key, value in values.items():
+        for key, value in list(values.items()):
             lil[key, 0] = value
         return lil
 
@@ -365,7 +368,7 @@ class SciPyTests(PySparkTestCase):
 
 if __name__ == "__main__":
     if not _have_scipy:
-        print "NOTE: Skipping SciPy tests as it does not seem to be installed"
+        print("NOTE: Skipping SciPy tests as it does not seem to be installed")
     unittest.main()
     if not _have_scipy:
-        print "NOTE: SciPy tests were skipped as it does not seem to be installed"
+        print("NOTE: SciPy tests were skipped as it does not seem to be installed")

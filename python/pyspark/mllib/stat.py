@@ -18,6 +18,7 @@
 """
 Python package for statistical functions in MLlib.
 """
+from __future__ import absolute_import
 
 from pyspark.mllib.common import callMLlibFunc, JavaModelWrapper
 from pyspark.mllib.linalg import _convert_to_vector

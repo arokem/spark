@@ -1,3 +1,4 @@
+from __future__ import absolute_import
 #
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
@@ -21,6 +22,7 @@ import warnings
 from pyspark.mllib.common import callMLlibFunc
 from pyspark.mllib.linalg import Vectors, SparseVector, _convert_to_vector
 from pyspark.mllib.regression import LabeledPoint
+from six.moves import range
 
 
 class MLUtils(object):
@@ -41,7 +43,7 @@ class MLUtils(object):
         nnz = len(items) - 1
         indices = np.zeros(nnz, dtype=np.int32)
         values = np.zeros(nnz)
-        for i in xrange(nnz):
+        for i in range(nnz):
             index, value = items[1 + i].split(":")
             indices[i] = int(index) - 1
             values[i] = float(value)
@@ -55,10 +57,10 @@ class MLUtils(object):
         v = _convert_to_vector(p.features)
         if isinstance(v, SparseVector):
             nnz = len(v.indices)
-            for i in xrange(nnz):
+            for i in range(nnz):
                 items.append(str(v.indices[i] + 1) + ":" + str(v.values[i]))
         else:
-            for i in xrange(len(v)):
+            for i in range(len(v)):
                 items.append(str(i + 1) + ":" + str(v[i]))
         return " ".join(items)
 

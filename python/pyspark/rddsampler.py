@@ -1,3 +1,5 @@
+from __future__ import absolute_import
+from __future__ import print_function
 #
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
@@ -17,6 +19,7 @@
 
 import sys
 import random
+from six.moves import range
 
 
 class RDDSamplerBase(object):
@@ -26,9 +29,9 @@ class RDDSamplerBase(object):
             import numpy
             self._use_numpy = True
         except ImportError:
-            print >> sys.stderr, (
+            print((
                 "NumPy does not appear to be installed. "
-                "Falling back to default random generator for sampling.")
+                "Falling back to default random generator for sampling."), file=sys.stderr)
             self._use_numpy = False
 
         self._seed = seed if seed is not None else random.randint(0, 2 ** 32 - 1)

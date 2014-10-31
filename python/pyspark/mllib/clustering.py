@@ -1,3 +1,4 @@
+from __future__ import absolute_import
 #
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
@@ -18,6 +19,7 @@
 from pyspark import SparkContext
 from pyspark.mllib.common import callMLlibFunc, callJavaFunc, _to_java_object_rdd
 from pyspark.mllib.linalg import SparseVector, _convert_to_vector
+from six.moves import range
 
 __all__ = ['KMeansModel', 'KMeans']
 
@@ -67,7 +69,7 @@ class KMeansModel(object):
         best = 0
         best_distance = float("inf")
         x = _convert_to_vector(x)
-        for i in xrange(len(self.centers)):
+        for i in range(len(self.centers)):
             distance = x.squared_distance(self.centers[i])
             if distance < best_distance:
                 best = i

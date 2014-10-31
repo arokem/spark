@@ -308,6 +308,11 @@ These two make it possible to view the heap as a regular Python list
 without surprises: heap[0] is the smallest item, and heap.sort()
 maintains the heap invariant!
 """
+from __future__ import absolute_import
+from __future__ import print_function
+from six.moves import map
+from six.moves import range
+from six.moves import zip
 
 # Original code by Kevin O'Connor, augmented by Tim Peters and Raymond Hettinger
 
@@ -454,7 +459,7 @@ def heapify(x):
     # or i < (n-1)/2.  If n is even = 2*j, this is (2*j-1)/2 = j-1/2 so
     # j-1 is the largest, which is n//2 - 1.  If n is odd = 2*j+1, this is
     # (2*j+1-1)/2 = j so j-1 is the largest, and that's again n//2-1.
-    for i in reversed(range(n//2)):
+    for i in reversed(list(range(n//2))):
         _siftup(x, i)
 
 def _heappop_max(heap):
@@ -477,7 +482,7 @@ def _heapreplace_max(heap, item):
 def _heapify_max(x):
     """Transform list into a maxheap, in-place, in O(len(x)) time."""
     n = len(x)
-    for i in reversed(range(n//2)):
+    for i in reversed(list(range(n//2))):
         _siftup_max(x, i)
 
 # 'heap' is a heap at all indices >= startpos, except possibly for pos.  pos
@@ -771,7 +776,7 @@ def nsmallest(n, iterable, key=None):
         it = iter(iterable)
         # put the range(n) first so that zip() doesn't
         # consume one too many elements from the iterator
-        result = [(elem, i) for i, elem in zip(range(n), it)]
+        result = [(elem, i) for i, elem in zip(list(range(n)), it)]
         if not result:
             return result
         _heapify_max(result)
@@ -788,7 +793,7 @@ def nsmallest(n, iterable, key=None):
 
     # General case, slowest method
     it = iter(iterable)
-    result = [(key(elem), i, elem) for i, elem in zip(range(n), it)]
+    result = [(key(elem), i, elem) for i, elem in zip(list(range(n)), it)]
     if not result:
         return result
     _heapify_max(result)
@@ -832,7 +837,7 @@ def nlargest(n, iterable, key=None):
     # When key is none, use simpler decoration
     if key is None:
         it = iter(iterable)
-        result = [(elem, i) for i, elem in zip(range(0, -n, -1), it)]
+        result = [(elem, i) for i, elem in zip(list(range(0, -n, -1)), it)]
         if not result:
             return result
         heapify(result)
@@ -849,7 +854,7 @@ def nlargest(n, iterable, key=None):
 
     # General case, slowest method
     it = iter(iterable)
-    result = [(key(elem), i, elem) for i, elem in zip(range(0, -n, -1), it)]
+    result = [(key(elem), i, elem) for i, elem in zip(list(range(0, -n, -1)), it)]
     if not result:
         return result
     heapify(result)
@@ -887,4 +892,4 @@ except ImportError:
 if __name__ == "__main__":
 
     import doctest
-    print(doctest.testmod())
+    print((doctest.testmod()))

@@ -85,13 +85,15 @@ Traceback (most recent call last):
     ...
 Exception:...
 """
+from __future__ import absolute_import
 
 import select
 import struct
-import SocketServer
+import six.moves.socketserver
 import threading
 from pyspark.cloudpickle import CloudPickler
 from pyspark.serializers import read_int, PickleSerializer
+from six.moves import range
 
 
 __all__ = ['Accumulator', 'AccumulatorParam']
@@ -230,7 +232,7 @@ class PStatsParam(AccumulatorParam):
         return value1
 
 
-class _UpdateRequestHandler(SocketServer.StreamRequestHandler):
+class _UpdateRequestHandler(six.moves.socketserver.StreamRequestHandler):
 
     """
     This handler will keep polling updates from the same socket until the
@@ -251,7 +253,7 @@ class _UpdateRequestHandler(SocketServer.StreamRequestHandler):
                 self.wfile.write(struct.pack("!b", 1))
 
 
-class AccumulatorServer(SocketServer.TCPServer):
+class AccumulatorServer(six.moves.socketserver.TCPServer):
 
     """
     A simple TCP server that intercepts shutdown() in order to interrupt
@@ -261,7 +263,7 @@ class AccumulatorServer(SocketServer.TCPServer):
 
     def shutdown(self):
         self.server_shutdown = True
-        SocketServer.TCPServer.shutdown(self)
+        six.moves.socketserver.TCPServer.shutdown(self)
 
 
 def _start_update_server():

@@ -20,10 +20,12 @@ An interactive shell.
 
 This file is designed to be launched as a PYTHONSTARTUP script.
 """
+from __future__ import absolute_import
+from __future__ import print_function
 
 import sys
 if sys.version_info[0] != 2:
-    print("Error: Default Python used is Python%s" % sys.version_info.major)
+    print(("Error: Default Python used is Python%s" % sys.version_info.major))
     print("\tSet env variable PYSPARK_PYTHON to Python2 binary and re-run it.")
     sys.exit(1)
 
@@ -45,24 +47,24 @@ if os.environ.get("SPARK_EXECUTOR_URI"):
 sc = SparkContext(appName="PySparkShell", pyFiles=add_files)
 atexit.register(lambda: sc.stop())
 
-print("""Welcome to
+print(("""Welcome to
       ____              __
      / __/__  ___ _____/ /__
     _\ \/ _ \/ _ `/ __/  '_/
    /__ / .__/\_,_/_/ /_/\_\   version %s
       /_/
-""" % sc.version)
-print("Using Python version %s (%s, %s)" % (
+""" % sc.version))
+print(("Using Python version %s (%s, %s)" % (
     platform.python_version(),
     platform.python_build()[0],
-    platform.python_build()[1]))
+    platform.python_build()[1])))
 print("SparkContext available as sc.")
 
 if add_files is not None:
-    print("Adding files: [%s]" % ", ".join(add_files))
+    print(("Adding files: [%s]" % ", ".join(add_files)))
 
 # The ./bin/pyspark script stores the old PYTHONSTARTUP value in OLD_PYTHONSTARTUP,
 # which allows us to execute the user's PYTHONSTARTUP file:
 _pythonstartup = os.environ.get('OLD_PYTHONSTARTUP')
 if _pythonstartup and os.path.isfile(_pythonstartup):
-    execfile(_pythonstartup)
+    exec(compile(open(_pythonstartup).read(), _pythonstartup, 'exec'))

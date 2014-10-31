@@ -22,12 +22,14 @@ around. For sparse vectors, users can construct a L{SparseVector}
 object from MLlib or pass SciPy C{scipy.sparse} column vectors if
 SciPy is available in their environment.
 """
+from __future__ import absolute_import
 
 import sys
 import array
-import copy_reg
+import six.moves.copyreg
 
 import numpy as np
+from six.moves import range
 
 
 __all__ = ['Vector', 'DenseVector', 'SparseVector', 'Vectors']
@@ -37,7 +39,7 @@ if sys.version_info[:2] == (2, 7):
     # speed up pickling array in Python 2.7
     def fast_pickle_array(ar):
         return array.array, (ar.typecode, ar.tostring())
-    copy_reg.pickle(array.array, fast_pickle_array)
+    six.moves.copyreg.pickle(array.array, fast_pickle_array)
 
 
 # Check whether we have SciPy. MLlib works without it too, but if we have it, some methods,
@@ -262,7 +264,7 @@ class SparseVector(Vector):
         if len(args) == 1:
             pairs = args[0]
             if type(pairs) == dict:
-                pairs = pairs.items()
+                pairs = list(pairs.items())
             pairs = sorted(pairs)
             self.indices = array.array('i', [p[0] for p in pairs])
             self.values = array.array('d', [p[1] for p in pairs])
@@ -270,7 +272,7 @@ class SparseVector(Vector):
             assert len(args[0]) == len(args[1]), "index and value arrays not same length"
             self.indices = array.array('i', args[0])
             self.values = array.array('d', args[1])
-            for i in xrange(len(self.indices) - 1):
+            for i in range(len(self.indices) - 1):
                 if self.indices[i] >= self.indices[i + 1]:
                     raise TypeError("indices array must be sorted")
 
@@ -310,7 +312,7 @@ class SparseVector(Vector):
         """
         if type(other) == np.ndarray:
             if other.ndim == 2:
-                results = [self.dot(other[:, i]) for i in xrange(other.shape[1])]
+                results = [self.dot(other[:, i]) for i in range(other.shape[1])]
                 return np.array(results)
             elif other.ndim > 2:
                 raise ValueError("Cannot call dot with %d-dimensional array" % other.ndim)
@@ -319,7 +321,7 @@ class SparseVector(Vector):
 
         if type(other) in (np.ndarray, array.array, DenseVector):
             result = 0.0
-            for i in xrange(len(self.indices)):
+            for i in range(len(self.indices)):
                 result += self.values[i] * other[self.indices[i]]
             return result
 
@@ -372,7 +374,7 @@ class SparseVector(Vector):
                                 other.ndim)
             result = 0.0
             j = 0   # index into our own array
-            for i in xrange(len(other)):
+            for i in range(len(other)):
                 if j < len(self.indices) and self.indices[j] == i:
                     diff = self.values[j] - other[i]
                     result += diff * diff
@@ -411,7 +413,7 @@ class SparseVector(Vector):
         Returns a copy of this SparseVector as a 1-dimensional NumPy array.
         """
         arr = np.zeros((self.size,), dtype=np.float64)
-        for i in xrange(len(self.indices)):
+        for i in range(len(self.indices)):
             arr[self.indices[i]] = self.values[i]
         return arr
 
@@ -427,7 +429,7 @@ class SparseVector(Vector):
         inds = self.indices
         vals = self.values
         entries = ", ".join(["{0}: {1}".format(inds[i], _format_float(vals[i]))
-                             for i in xrange(len(inds))])
+                             for i in range(len(inds))])
         return "SparseVector({0}, {{{1}}})".format(self.size, entries)
 
     def __eq__(self, other):

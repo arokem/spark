@@ -1,3 +1,4 @@
+from __future__ import absolute_import
 #
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
@@ -22,6 +23,7 @@ from py4j.java_collections import MapConverter, ListConverter, JavaArray, JavaLi
 
 from pyspark import RDD, SparkContext
 from pyspark.serializers import PickleSerializer, AutoBatchedSerializer
+import six
 
 
 # Hack for support float('inf') in Py4j
@@ -36,7 +38,7 @@ _float_str_mapping = {
 
 def _new_smart_decode(obj):
     if isinstance(obj, float):
-        s = unicode(obj)
+        s = six.text_type(obj)
         return _float_str_mapping.get(s, s)
     return _old_smart_decode(obj)
 
@@ -78,7 +80,7 @@ def _py2java(sc, obj):
         obj = ListConverter().convert(obj, sc._gateway._gateway_client)
     elif isinstance(obj, JavaObject):
         pass
-    elif isinstance(obj, (int, long, float, bool, basestring)):
+    elif isinstance(obj, (int, int, float, bool, six.string_types)):
         pass
     else:
         bytes = bytearray(PickleSerializer().dumps(obj))

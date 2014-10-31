@@ -1,3 +1,4 @@
+from __future__ import absolute_import
 #
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
@@ -20,6 +21,7 @@ from datetime import datetime
 import traceback
 
 from pyspark import SparkContext, RDD
+from six.moves import zip
 
 
 class TransformFunction(object):
@@ -116,7 +118,7 @@ def rddToFileName(prefix, suffix, timestamp):
     """
     if isinstance(timestamp, datetime):
         seconds = time.mktime(timestamp.timetuple())
-        timestamp = long(seconds * 1000) + timestamp.microsecond / 1000
+        timestamp = int(seconds * 1000) + timestamp.microsecond / 1000
     if suffix is None:
         return prefix + "-" + str(timestamp)
     else:

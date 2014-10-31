@@ -1,3 +1,5 @@
+from __future__ import absolute_import
+from __future__ import print_function
 #
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
@@ -26,6 +28,7 @@ from pyspark.context import SparkContext
 from pyspark.storagelevel import StorageLevel
 from pyspark.streaming.dstream import DStream
 from pyspark.streaming.util import TransformFunction, TransformFunctionSerializer
+from six.moves import range
 
 __all__ = ["StreamingContext"]
 
@@ -157,7 +160,7 @@ class StreamingContext(object):
         try:
             jssc = gw.jvm.JavaStreamingContext(checkpointPath)
         except Exception:
-            print >>sys.stderr, "failed to load StreamingContext from checkpoint"
+            print("failed to load StreamingContext from checkpoint", file=sys.stderr)
             raise
 
         jsc = jssc.sparkContext()

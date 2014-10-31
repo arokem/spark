@@ -18,6 +18,8 @@
 """
 Worker that receives input from Piped RDD.
 """
+from __future__ import absolute_import
+from __future__ import print_function
 import os
 import sys
 import time
@@ -33,6 +35,7 @@ from pyspark.serializers import write_with_length, write_int, read_long, \
     write_long, read_int, SpecialLengths, UTF8Deserializer, PickleSerializer, \
     CompressedSerializer
 from pyspark import shuffle
+from six.moves import range
 
 pickleSer = PickleSerializer()
 utf8_deserializer = UTF8Deserializer()
@@ -116,8 +119,8 @@ def main(infile, outfile):
             pass
         except Exception:
             # Write the error to stderr if it happened while serializing
-            print >> sys.stderr, "PySpark worker failed with exception:"
-            print >> sys.stderr, traceback.format_exc()
+            print("PySpark worker failed with exception:", file=sys.stderr)
+            print(traceback.format_exc(), file=sys.stderr)
         exit(-1)
     finish_time = time.time()
     report_times(outfile, boot_time, init_time, finish_time)
@@ -127,7 +130,7 @@ def main(infile, outfile):
     # Mark the beginning of the accumulators section of the output
     write_int(SpecialLengths.END_OF_DATA_SECTION, outfile)
     write_int(len(_accumulatorRegistry), outfile)
-    for (aid, accum) in _accumulatorRegistry.items():
+    for (aid, accum) in list(_accumulatorRegistry.items()):
         pickleSer._write_with_length((aid, accum._value), outfile)
 
     # check end of stream

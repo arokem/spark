@@ -1,3 +1,5 @@
+from __future__ import absolute_import
+from __future__ import print_function
 #
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
@@ -35,6 +37,8 @@ from pyspark.rdd import RDD
 from pyspark.traceback_utils import CallSite, first_spark_call
 
 from py4j.java_collections import ListConverter
+import six
+from six.moves import range
 
 
 __all__ = ['SparkContext']
@@ -131,9 +135,9 @@ class SparkContext(object):
         if sparkHome:
             self._conf.setSparkHome(sparkHome)
         if environment:
-            for key, value in environment.iteritems():
+            for key, value in six.iteritems(environment):
                 self._conf.setExecutorEnv(key, value)
-        for key, value in DEFAULT_CONFIGS.items():
+        for key, value in list(DEFAULT_CONFIGS.items()):
             self._conf.setIfMissing(key, value)
 
         # Check that we have at least the required parameters
@@ -400,7 +404,7 @@ class SparkContext(object):
         jm = self._jvm.java.util.HashMap()
         if not d:
             d = {}
-        for k, v in d.iteritems():
+        for k, v in six.iteritems(d):
             jm[k] = v
         return jm
 
@@ -786,7 +790,7 @@ class SparkContext(object):
         [0, 1, 16, 25]
         """
         if partitions is None:
-            partitions = range(rdd._jrdd.partitions().size())
+            partitions = list(range(rdd._jrdd.partitions().size()))
         javaPartitions = ListConverter().convert(partitions, self._gateway._gateway_client)
 
         # Implementation note: This is implemented as a mapPartitions followed
@@ -811,9 +815,9 @@ class SparkContext(object):
         for i, (id, acc, showed) in enumerate(self._profile_stats):
             stats = acc.value
             if not showed and stats:
-                print "=" * 60
-                print "Profile of RDD<id=%d>" % id
-                print "=" * 60
+                print("=" * 60)
+                print("Profile of RDD<id=%d>" % id)
+                print("=" * 60)
                 stats.sort_stats("time", "cumulative").print_stats()
                 # mark it as showed
                 self._profile_stats[i][2] = True

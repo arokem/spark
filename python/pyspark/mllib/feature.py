@@ -18,6 +18,7 @@
 """
 Python package for feature in MLlib.
 """
+from __future__ import absolute_import
 import sys
 import warnings
 
@@ -26,6 +27,7 @@ from py4j.protocol import Py4JJavaError
 from pyspark import RDD, SparkContext
 from pyspark.mllib.common import callMLlibFunc, JavaModelWrapper
 from pyspark.mllib.linalg import Vectors
+from six.moves import zip
 
 __all__ = ['Normalizer', 'StandardScalerModel', 'StandardScaler',
            'HashingTF', 'IDFModel', 'IDF', 'Word2Vec', 'Word2VecModel']
@@ -193,7 +195,7 @@ class HashingTF(object):
         for term in document:
             i = self.indexOf(term)
             freq[i] = freq.get(i, 0) + 1.0
-        return Vectors.sparse(self.numFeatures, freq.items())
+        return Vectors.sparse(self.numFeatures, list(freq.items()))
 
 
 class IDFModel(JavaVectorTransformer):
@@ -288,7 +290,7 @@ class Word2VecModel(JavaVectorTransformer):
         Note: local use only
         """
         words, similarity = self.call("findSynonyms", word, num)
-        return zip(words, similarity)
+        return list(zip(words, similarity))
 
 
 class Word2Vec(object):
@@ -326,7 +328,7 @@ class Word2Vec(object):
         """
         Construct Word2Vec instance
         """
-        import random  # this can't be on the top because of mllib.random
+        from . import random  # this can't be on the top because of mllib.random
 
         self.vectorSize = 100
         self.learningRate = 0.025
@@ -379,7 +381,7 @@ class Word2Vec(object):
         """
         jmodel = callMLlibFunc("trainWord2Vec", data, int(self.vectorSize),
                                float(self.learningRate), int(self.numPartitions),
-                               int(self.numIterations), long(self.seed))
+                               int(self.numIterations), int(self.seed))
         return Word2VecModel(jmodel)
 
 

@@ -36,6 +36,7 @@ Public classes:
       Finer-grained cache persistence levels.
 
 """
+from __future__ import absolute_import
 
 # The following block allows us to import python's random instead of mllib.random for scripts in
 # mllib that depend on top level pyspark packages, which transitively depend on python's random.

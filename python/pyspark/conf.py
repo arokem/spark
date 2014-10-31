@@ -53,6 +53,8 @@ spark.home=/path
 [(u'spark.executorEnv.VAR1', u'value1'), (u'spark.executorEnv.VAR3', u'value3'), \
 (u'spark.executorEnv.VAR4', u'value4'), (u'spark.home', u'/path')]
 """
+from __future__ import absolute_import
+import six
 
 __all__ = ['SparkConf']
 
@@ -100,7 +102,7 @@ class SparkConf(object):
 
     def set(self, key, value):
         """Set a configuration property."""
-        self._jconf.set(key, unicode(value))
+        self._jconf.set(key, six.text_type(value))
         return self
 
     def setIfMissing(self, key, value):

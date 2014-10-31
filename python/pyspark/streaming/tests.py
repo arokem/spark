@@ -1,3 +1,5 @@
+from __future__ import absolute_import
+from __future__ import print_function
 #
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
@@ -24,6 +26,9 @@ import tempfile
 
 from pyspark.context import SparkConf, SparkContext, RDD
 from pyspark.streaming.context import StreamingContext
+from six.moves import map
+from six.moves import range
+from functools import reduce
 
 
 class PySparkStreamingTestCase(unittest.TestCase):
@@ -47,7 +52,7 @@ class PySparkStreamingTestCase(unittest.TestCase):
         while len(result) < n and time.time() - start_time < self.timeout:
             time.sleep(0.01)
         if len(result) < n:
-            print "timeout after", self.timeout
+            print("timeout after", self.timeout)
 
     def _take(self, dstream, n):
         """
@@ -123,48 +128,47 @@ class BasicOperationTests(PySparkStreamingTestCase):
 
     def test_map(self):
         """Basic operation test for DStream.map."""
-        input = [range(1, 5), range(5, 9), range(9, 13)]
+        input = [list(range(1, 5)), list(range(5, 9)), list(range(9, 13))]
 
         def func(dstream):
             return dstream.map(str)
-        expected = map(lambda x: map(str, x), input)
+        expected = [list(map(str, x)) for x in input]
         self._test_func(input, func, expected)
 
     def test_flatMap(self):
         """Basic operation test for DStream.faltMap."""
-        input = [range(1, 5), range(5, 9), range(9, 13)]
+        input = [list(range(1, 5)), list(range(5, 9)), list(range(9, 13))]
 
         def func(dstream):
             return dstream.flatMap(lambda x: (x, x * 2))
-        expected = map(lambda x: list(chain.from_iterable((map(lambda y: [y, y * 2], x)))),
-                       input)
+        expected = [list(chain.from_iterable(([[y, y * 2] for y in x]))) for x in input]
         self._test_func(input, func, expected)
 
     def test_filter(self):
         """Basic operation test for DStream.filter."""
-        input = [range(1, 5), range(5, 9), range(9, 13)]
+        input = [list(range(1, 5)), list(range(5, 9)), list(range(9, 13))]
 
         def func(dstream):
             return dstream.filter(lambda x: x % 2 == 0)
-        expected = map(lambda x: filter(lambda y: y % 2 == 0, x), input)
+        expected = [[y for y in x if y % 2 == 0] for x in input]
         self._test_func(input, func, expected)
 
     def test_count(self):
         """Basic operation test for DStream.count."""
-        input = [range(5), range(10), range(20)]
+        input = [list(range(5)), list(range(10)), list(range(20))]
 
         def func(dstream):
             return dstream.count()
-        expected = map(lambda x: [len(x)], input)
+        expected = [[len(x)] for x in input]
         self._test_func(input, func, expected)
 
     def test_reduce(self):
         """Basic operation test for DStream.reduce."""
-        input = [range(1, 5), range(5, 9), range(9, 13)]
+        input = [list(range(1, 5)), list(range(5, 9)), list(range(9, 13))]
 
         def func(dstream):
             return dstream.reduce(operator.add)
-        expected = map(lambda x: [reduce(operator.add, x)], input)
+        expected = [[reduce(operator.add, x)] for x in input]
         self._test_func(input, func, expected)
 
     def test_reduceByKey(self):
@@ -207,7 +211,7 @@ class BasicOperationTests(PySparkStreamingTestCase):
 
     def test_glom(self):
         """Basic operation test for DStream.glom."""
-        input = [range(1, 5), range(5, 9), range(9, 13)]
+        input = [list(range(1, 5)), list(range(5, 9)), list(range(9, 13))]
         rdds = [self.sc.parallelize(r, 2) for r in input]
 
         def func(dstream):
@@ -217,7 +221,7 @@ class BasicOperationTests(PySparkStreamingTestCase):
 
     def test_mapPartitions(self):
         """Basic operation test for DStream.mapPartitions."""
-        input = [range(1, 5), range(5, 9), range(9, 13)]
+        input = [list(range(1, 5)), list(range(5, 9)), list(range(9, 13))]
         rdds = [self.sc.parallelize(r, 2) for r in input]
 
         def func(dstream):
@@ -229,7 +233,7 @@ class BasicOperationTests(PySparkStreamingTestCase):
 
     def test_countByValue(self):
         """Basic operation test for DStream.countByValue."""
-        input = [range(1, 5) * 2, range(5, 7) + range(5, 9), ["a", "a", "b", ""]]
+        input = [list(range(1, 5)) * 2, list(range(5, 7)) + list(range(5, 9)), ["a", "a", "b", ""]]
 
         def func(dstream):
             return dstream.countByValue()
@@ -266,7 +270,7 @@ class BasicOperationTests(PySparkStreamingTestCase):
         self._test_func(input, func, expected, sort=True)
 
     def test_repartition(self):
-        input = [range(1, 5), range(5, 9)]
+        input = [list(range(1, 5)), list(range(5, 9))]
         rdds = [self.sc.parallelize(r, 2) for r in input]
 
         def func(dstream):
@@ -275,13 +279,13 @@ class BasicOperationTests(PySparkStreamingTestCase):
         self._test_func(rdds, func, expected)
 
     def test_union(self):
-        input1 = [range(3), range(5), range(6)]
-        input2 = [range(3, 6), range(5, 6)]
+        input1 = [list(range(3)), list(range(5)), list(range(6))]
+        input2 = [list(range(3, 6)), list(range(5, 6))]
 
         def func(d1, d2):
             return d1.union(d2)
 
-        expected = [range(6), range(6), range(6)]
+        expected = [list(range(6)), list(range(6)), list(range(6))]
         self._test_func(input1, func, expected, input2=input2)
 
     def test_cogroup(self):
@@ -363,7 +367,7 @@ class WindowFunctionTests(PySparkStreamingTestCase):
     timeout = 20
 
     def test_window(self):
-        input = [range(1), range(2), range(3), range(4), range(5)]
+        input = [list(range(1)), list(range(2)), list(range(3)), list(range(4)), list(range(5))]
 
         def func(dstream):
             return dstream.window(3, 1).count()
@@ -372,7 +376,7 @@ class WindowFunctionTests(PySparkStreamingTestCase):
         self._test_func(input, func, expected)
 
     def test_count_by_window(self):
-        input = [range(1), range(2), range(3), range(4), range(5)]
+        input = [list(range(1)), list(range(2)), list(range(3)), list(range(4)), list(range(5))]
 
         def func(dstream):
             return dstream.countByWindow(3, 1)
@@ -381,7 +385,7 @@ class WindowFunctionTests(PySparkStreamingTestCase):
         self._test_func(input, func, expected)
 
     def test_count_by_window_large(self):
-        input = [range(1), range(2), range(3), range(4), range(5), range(6)]
+        input = [list(range(1)), list(range(2)), list(range(3)), list(range(4)), list(range(5)), list(range(6))]
 
         def func(dstream):
             return dstream.countByWindow(5, 1)
@@ -390,7 +394,7 @@ class WindowFunctionTests(PySparkStreamingTestCase):
         self._test_func(input, func, expected)
 
     def test_count_by_value_and_window(self):
-        input = [range(1), range(2), range(3), range(4), range(5), range(6)]
+        input = [list(range(1)), list(range(2)), list(range(3)), list(range(4)), list(range(5)), list(range(6))]
 
         def func(dstream):
             return dstream.countByValueAndWindow(5, 1)
@@ -409,7 +413,7 @@ class WindowFunctionTests(PySparkStreamingTestCase):
         self._test_func(input, func, expected)
 
     def test_reduce_by_invalid_window(self):
-        input1 = [range(3), range(5), range(1), range(6)]
+        input1 = [list(range(3)), list(range(5)), list(range(1)), list(range(6))]
         d1 = self.ssc.queueStream(input1)
         self.assertRaises(ValueError, lambda: d1.reduceByKeyAndWindow(None, None, 0.1, 0.1))
         self.assertRaises(ValueError, lambda: d1.reduceByKeyAndWindow(None, None, 1, 0.1))
@@ -420,7 +424,7 @@ class StreamingContextTests(PySparkStreamingTestCase):
     duration = 0.1
 
     def _add_input_stream(self):
-        inputs = map(lambda x: range(1, x), range(101))
+        inputs = [list(range(1, x)) for x in range(101)]
         stream = self.ssc.queueStream(inputs)
         self._collect(stream, 1, block=False)
 
@@ -428,7 +432,7 @@ class StreamingContextTests(PySparkStreamingTestCase):
         self._add_input_stream()
         self.ssc.start()
         self.ssc.stop(False)
-        self.assertEqual(len(self.sc.parallelize(range(5), 5).glom().collect()), 5)
+        self.assertEqual(len(self.sc.parallelize(list(range(5)), 5).glom().collect()), 5)
 
     def test_stop_multiple_times(self):
         self._add_input_stream()
@@ -437,7 +441,7 @@ class StreamingContextTests(PySparkStreamingTestCase):
         self.ssc.stop()
 
     def test_queue_stream(self):
-        input = [range(i + 1) for i in range(3)]
+        input = [list(range(i + 1)) for i in range(3)]
         dstream = self.ssc.queueStream(input)
         result = self._collect(dstream, 3)
         self.assertEqual(input, result)
@@ -453,10 +457,10 @@ class StreamingContextTests(PySparkStreamingTestCase):
             with open(os.path.join(d, name), "w") as f:
                 f.writelines(["%d\n" % i for i in range(10)])
         self.wait_for(result, 2)
-        self.assertEqual([range(10), range(10)], result)
+        self.assertEqual([list(range(10)), list(range(10))], result)
 
     def test_union(self):
-        input = [range(i + 1) for i in range(3)]
+        input = [list(range(i + 1)) for i in range(3)]
         dstream = self.ssc.queueStream(input)
         dstream2 = self.ssc.queueStream(input)
         dstream3 = self.ssc.union(dstream, dstream2)
@@ -518,7 +522,7 @@ class CheckpointTests(PySparkStreamingTestCase):
                     time.sleep(0.01)
                     continue
                 ordd = ssc.sparkContext.textFile(p).map(lambda line: line.split(","))
-                d = ordd.values().map(int).collect()
+                d = list(ordd.values()).map(int).collect()
                 if not d:
                     time.sleep(0.01)
                     continue

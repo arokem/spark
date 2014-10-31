@@ -1,3 +1,4 @@
+from __future__ import absolute_import
 #
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
@@ -46,6 +47,10 @@ from pyspark.shuffle import Aggregator, InMemoryMerger, ExternalMerger, \
 from pyspark.traceback_utils import SCCallSiteSync
 
 from py4j.java_collections import ListConverter, MapConverter
+from . import six
+from six.moves import range
+from six.moves import zip
+from functools import reduce
 
 
 __all__ = ["RDD"]
@@ -310,7 +315,7 @@ class RDD(object):
         """
         return self.map(lambda x: (x, None)) \
                    .reduceByKey(lambda x, _: x, numPartitions) \
-                   .map(lambda (x, _): x)
+                   .map(lambda x__: x__[0])
 
     def sample(self, withReplacement, fraction, seed=None):
         """
@@ -442,10 +447,9 @@ class RDD(object):
         >>> rdd1.intersection(rdd2).collect()
         [1, 2, 3]
         """
-        return self.map(lambda v: (v, None)) \
+        return list(self.map(lambda v: (v, None)) \
             .cogroup(other.map(lambda v: (v, None))) \
-            .filter(lambda (k, vs): all(vs)) \
-            .keys()
+            .filter(lambda k_vs: all(k_vs[1])).keys())
 
     def _reserialize(self, serializer=None):
         serializer = serializer or self.ctx.serializer
@@ -488,7 +492,7 @@ class RDD(object):
 
         def sortPartition(iterator):
             sort = ExternalSorter(memory * 0.9, serializer).sorted if spill else sorted
-            return iter(sort(iterator, key=lambda (k, v): keyfunc(k), reverse=(not ascending)))
+            return iter(sort(iterator, key=lambda k_v: keyfunc(k_v[0]), reverse=(not ascending)))
 
         return self.partitionBy(numPartitions, partitionFunc).mapPartitions(sortPartition, True)
 
@@ -518,7 +522,7 @@ class RDD(object):
 
         def sortPartition(iterator):
             sort = ExternalSorter(memory * 0.9, serializer).sorted if spill else sorted
-            return iter(sort(iterator, key=lambda (k, v): keyfunc(k), reverse=(not ascending)))
+            return iter(sort(iterator, key=lambda k_v1: keyfunc(k_v1[0]), reverse=(not ascending)))
 
         if numPartitions == 1:
             if self.getNumPartitions() > 1:
@@ -531,7 +535,7 @@ class RDD(object):
         rddSize = self.count()
         maxSampleSize = numPartitions * 20.0  # constant from Spark's RangePartitioner
         fraction = min(maxSampleSize / max(rddSize, 1), 1.0)
-        samples = self.sample(False, fraction, 1).map(lambda (k, v): k).collect()
+        samples = self.sample(False, fraction, 1).map(lambda k_v2: k_v2[0]).collect()
         samples = sorted(samples, reverse=(not ascending), key=keyfunc)
 
         # we have numPartitions many parts but one of the them has
@@ -558,7 +562,7 @@ class RDD(object):
         >>> sc.parallelize(tmp).sortBy(lambda x: x[1]).collect()
         [('a', 1), ('b', 2), ('1', 3), ('d', 4), ('2', 5)]
         """
-        return self.keyBy(keyfunc).sortByKey(ascending, numPartitions).values()
+        return list(self.keyBy(keyfunc).sortByKey(ascending, numPartitions).values())
 
     def glom(self):
         """
@@ -845,7 +849,7 @@ class RDD(object):
         (('a', 'b', 'c'), [2, 2])
         """
 
-        if isinstance(buckets, (int, long)):
+        if isinstance(buckets, six.integer_types):
             if buckets < 1:
                 raise ValueError("number of buckets must be >= 1")
 
@@ -998,7 +1002,7 @@ class RDD(object):
             yield counts
 
         def mergeMaps(m1, m2):
-            for k, v in m2.iteritems():
+            for k, v in six.iteritems(m2):
                 m1[k] += v
             return m1
         return self.mapPartitions(countPartition).reduce(mergeMaps)
@@ -1087,7 +1091,7 @@ class RDD(object):
                     yield next(iterator)
                     taken += 1
 
-            p = range(partsScanned, min(partsScanned + numPartsToTry, totalParts))
+            p = list(range(partsScanned, min(partsScanned + numPartsToTry, totalParts)))
             res = self.context.runJob(self, takeUpToNumLeft, p, True)
 
             items += res
@@ -1260,9 +1264,9 @@ class RDD(object):
         """
         def func(split, iterator):
             for x in iterator:
-                if not isinstance(x, basestring):
-                    x = unicode(x)
-                if isinstance(x, unicode):
+                if not isinstance(x, six.string_types):
+                    x = six.text_type(x)
+                if isinstance(x, six.text_type):
                     x = x.encode("utf-8")
                 yield x
         keyed = self.mapPartitionsWithIndex(func)
@@ -1291,7 +1295,7 @@ class RDD(object):
         >>> m.collect()
         [1, 3]
         """
-        return self.map(lambda (k, v): k)
+        return self.map(lambda k_v3: k_v3[0])
 
     def values(self):
         """
@@ -1301,7 +1305,7 @@ class RDD(object):
         >>> m.collect()
         [2, 4]
         """
-        return self.map(lambda (k, v): v)
+        return self.map(lambda k_v4: k_v4[1])
 
     def reduceByKey(self, func, numPartitions=None):
         """
@@ -1340,7 +1344,7 @@ class RDD(object):
             yield m
 
         def mergeMaps(m1, m2):
-            for k, v in m2.iteritems():
+            for k, v in six.iteritems(m2):
                 m1[k] = func(m1[k], v) if k in m1 else v
             return m1
         return self.mapPartitions(reducePartition).reduce(mergeMaps)
@@ -1467,7 +1471,7 @@ class RDD(object):
                 if (c % 1000 == 0 and get_used_memory() > limit
                         or c > batch):
                     n, size = len(buckets), 0
-                    for split in buckets.keys():
+                    for split in list(buckets.keys()):
                         yield pack_long(split)
                         d = outputSerializer.dumps(buckets[split])
                         del buckets[split]
@@ -1482,7 +1486,7 @@ class RDD(object):
                         batch = max(batch / 1.5, 1)
                     c = 0
 
-            for split, items in buckets.iteritems():
+            for split, items in six.iteritems(buckets):
                 yield pack_long(split)
                 yield outputSerializer.dumps(items)
 
@@ -1493,7 +1497,7 @@ class RDD(object):
                 keyed._jrdd.rdd()).asJavaPairRDD()
             partitioner = self.ctx._jvm.PythonPartitioner(numPartitions,
                                                           id(partitionFunc))
-        jrdd = pairRDD.partitionBy(partitioner).values()
+        jrdd = list(pairRDD.partitionBy(partitioner).values())
         rdd = RDD(jrdd, self.ctx, BatchedSerializer(outputSerializer))
         # This is required so that id(partitionFunc) remains unique,
         # even if partitionFunc is a lambda:
@@ -1541,7 +1545,7 @@ class RDD(object):
             merger = ExternalMerger(agg, memory * 0.9, serializer) \
                 if spill else InMemoryMerger(agg)
             merger.mergeValues(iterator)
-            return merger.iteritems()
+            return six.iteritems(merger)
 
         locally_combined = self.mapPartitions(combineLocally)
         shuffled = locally_combined.partitionBy(numPartitions)
@@ -1550,7 +1554,7 @@ class RDD(object):
             merger = ExternalMerger(agg, memory, serializer) \
                 if spill else InMemoryMerger(agg)
             merger.mergeCombiners(iterator)
-            return merger.iteritems()
+            return six.iteritems(merger)
 
         return shuffled.mapPartitions(_mergeCombiners, True)
 
@@ -1627,7 +1631,7 @@ class RDD(object):
         >>> x.flatMapValues(f).collect()
         [('a', 'x'), ('a', 'y'), ('a', 'z'), ('b', 'p'), ('b', 'r')]
         """
-        flat_map_fn = lambda (k, v): ((k, x) for x in f(v))
+        flat_map_fn = lambda k_v6: ((k_v6[0], x) for x in f(k_v6[1]))
         return self.flatMap(flat_map_fn, preservesPartitioning=True)
 
     def mapValues(self, f):
@@ -1641,7 +1645,7 @@ class RDD(object):
         >>> x.mapValues(f).collect()
         [('a', 3), ('b', 1)]
         """
-        map_values_fn = lambda (k, v): (k, f(v))
+        map_values_fn = lambda k_v7: (k_v7[0], f(k_v7[1]))
         return self.map(map_values_fn, preservesPartitioning=True)
 
     def groupWith(self, other, *others):
@@ -1689,7 +1693,7 @@ class RDD(object):
         >>> max(sample["b"]) <= 999 and min(sample["b"]) >= 0
         True
         """
-        for fraction in fractions.values():
+        for fraction in list(fractions.values()):
             assert fraction >= 0.0, "Negative fraction value: %s" % fraction
         return self.mapPartitionsWithIndex(
             RDDStratifiedSampler(withReplacement, fractions, seed).func, True)
@@ -1704,7 +1708,8 @@ class RDD(object):
         >>> sorted(x.subtractByKey(y).collect())
         [('b', 4), ('b', 5)]
         """
-        def filter_func((key, vals)):
+        def filter_func(xxx_todo_changeme):
+            (key, vals) = xxx_todo_changeme
             return vals[0] and not vals[1]
         return self.cogroup(other, numPartitions).filter(filter_func).flatMapValues(lambda x: x[0])
 
@@ -1719,7 +1724,7 @@ class RDD(object):
         """
         # note: here 'True' is just a placeholder
         rdd = other.map(lambda x: (x, True))
-        return self.map(lambda x: (x, True)).subtractByKey(rdd, numPartitions).keys()
+        return list(self.map(lambda x: (x, True)).subtractByKey(rdd, numPartitions).keys())
 
     def keyBy(self, f):
         """
@@ -1930,7 +1935,7 @@ class RDD(object):
         >>> sorted.lookup(1024)
         []
         """
-        values = self.filter(lambda (k, v): k == key).values()
+        values = list(self.filter(lambda k_v5: k_v5[0] == key).values())
 
         if self._partitionFunc is not None:
             return self.ctx.runJob(values, lambda x: x, [self._partitionFunc(key)], False)

@@ -27,6 +27,7 @@
 
 >>> large_broadcast = sc.broadcast(list(range(10000)))
 """
+from __future__ import absolute_import
 import os
 
 from pyspark.serializers import CompressedSerializer, PickleSerializer
@@ -74,7 +75,7 @@ class Broadcast(object):
         """
         if not hasattr(self, "_value") and self.path is not None:
             ser = CompressedSerializer(PickleSerializer())
-            self._value = ser.load_stream(open(self.path)).next()
+            self._value = next(ser.load_stream(open(self.path)))
         return self._value
 
     def unpersist(self, blocking=False):

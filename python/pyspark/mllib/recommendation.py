@@ -1,3 +1,4 @@
+from __future__ import absolute_import
 #
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
@@ -77,7 +78,7 @@ class MatrixFactorizationModel(JavaModelWrapper):
         assert isinstance(user_product, RDD), "user_product should be RDD of (user, product)"
         first = user_product.first()
         assert len(first) == 2, "user_product should be RDD of (user, product)"
-        user_product = user_product.map(lambda (u, p): (int(u), int(p)))
+        user_product = user_product.map(lambda u_p: (int(u_p[0]), int(u_p[1])))
         return self.call("predict", user_product)
 
     def userFeatures(self):

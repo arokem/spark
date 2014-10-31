@@ -18,6 +18,7 @@
 """
 Python package for random data generation.
 """
+from __future__ import absolute_import
 
 from functools import wraps
 

@@ -18,6 +18,7 @@
 """
 Python bindings for MLlib.
 """
+from __future__ import absolute_import
 
 # MLlib currently needs and NumPy 1.4+, so complain if lower
 

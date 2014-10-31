@@ -1,3 +1,4 @@
+from __future__ import absolute_import
 #
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
@@ -26,6 +27,8 @@ import random
 
 import pyspark.heapq3 as heapq
 from pyspark.serializers import BatchedSerializer, PickleSerializer
+import six
+from six.moves import range
 
 try:
     import psutil
@@ -69,8 +72,8 @@ def _get_local_dirs(sub):
 
 
 # global stats
-MemoryBytesSpilled = 0L
-DiskBytesSpilled = 0L
+MemoryBytesSpilled = 0
+DiskBytesSpilled = 0
 
 
 class Aggregator(object):
@@ -149,7 +152,7 @@ class InMemoryMerger(Merger):
 
     def iteritems(self):
         """ Return the merged items ad iterator """
-        return self.data.iteritems()
+        return six.iteritems(self.data)
 
 
 class ExternalMerger(Merger):
@@ -334,7 +337,7 @@ class ExternalMerger(Merger):
             streams = [open(os.path.join(path, str(i)), 'w')
                        for i in range(self.partitions)]
 
-            for k, v in self.data.iteritems():
+            for k, v in six.iteritems(self.data):
                 h = self._partition(k)
                 # put one item in batch, make it compatitable with load_stream
                 # it will increase the memory if dump them in batch
@@ -352,7 +355,7 @@ class ExternalMerger(Merger):
                 p = os.path.join(path, str(i))
                 with open(p, "w") as f:
                     # dump items in batch
-                    self.serializer.dump_stream(self.pdata[i].iteritems(), f)
+                    self.serializer.dump_stream(six.iteritems(self.pdata[i]), f)
                 self.pdata[i].clear()
                 DiskBytesSpilled += os.path.getsize(p)
 
@@ -363,7 +366,7 @@ class ExternalMerger(Merger):
     def iteritems(self):
         """ Return all merged items as iterator """
         if not self.pdata and not self.spills:
-            return self.data.iteritems()
+            return six.iteritems(self.data)
         return self._external_items()
 
     def _external_items(self):
@@ -393,7 +396,7 @@ class ExternalMerger(Merger):
                             yield v
                         return
 
-                for v in self.data.iteritems():
+                for v in six.iteritems(self.data):
                     yield v
                 self.data.clear()
 
