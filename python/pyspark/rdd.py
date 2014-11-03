@@ -47,7 +47,7 @@ from pyspark.shuffle import Aggregator, InMemoryMerger, ExternalMerger, \
 from pyspark.traceback_utils import SCCallSiteSync
 
 from py4j.java_collections import ListConverter, MapConverter
-from . import six
+import six
 from six.moves import range
 from six.moves import zip
 from functools import reduce
